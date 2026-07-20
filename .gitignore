@@ -1,0 +1,23 @@
+# ── Virtual environments (generated, machine-specific — rebuild from requirements.txt) ──
+gma_venv/
+.venv/
+venv/
+
+# ── Secrets — NEVER commit ──
+.env
+secrets/
+
+# ── Personal data (meeting audio/transcripts — privacy + size) ──
+recordings/
+
+# ── Python build / cache artifacts (generated) ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# ── IDE / OS junk (machine-specific) ──
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
