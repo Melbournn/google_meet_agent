@@ -1,2 +1,10 @@
 pydantic>=2.0.0
 pydantic-settings
+google-api-python-client
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+
+# STT fallback only (when a meeting has no Google transcript). Lazy-imported,
+# so the pipeline runs without it installed. Install to use stt/transcribe.py.
+azure-cognitiveservices-speech
