@@ -54,7 +54,7 @@ def build_segment(entry: dict, people_by_ref: dict[str, Person], conf_start: dat
     return Segment(speaker = speaker, startMs = startMs, endMs = endMs, text = text)
 
 def build_meeting_record(conference, space, participants, entries) -> MeetingRecord:
-    meeting_id = conference["name"]
+    meeting_id = conference["name"].split("/")[-1]  # bare id (filesystem-safe key), not "conferenceRecords/abc123"
     conf_start = _parse_time(conference["startTime"])
     people_by_ref = _people_by_ref(participants)
     segments = sorted([build_segment(e, people_by_ref, conf_start) for e in entries], key=lambda s: s.startMs)

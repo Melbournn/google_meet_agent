@@ -63,7 +63,7 @@ ENTRIES = [
 def main():
     rec = build_meeting_record(CONFERENCE, SPACE, PARTICIPANTS, ENTRIES)
     checks = {
-        "meetingId": rec.meetingId == "conferenceRecords/abc123",
+        "meetingId": rec.meetingId == "abc123",
         "joinUrl": rec.joinUrl == "https://meet.google.com/abc-defg-hij",
         "2 participants": len(rec.participants) == 2,
         "signed-in name": rec.participants[0].name == "Алмаз",

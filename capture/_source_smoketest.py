@@ -109,7 +109,7 @@ def main():
     if records:
         rec = records[0]
         checks.update({
-            "meetingId": rec.meetingId == "conferenceRecords/abc123",
+            "meetingId": rec.meetingId == "abc123",
             "joinUrl": rec.joinUrl == "https://meet.google.com/abc-defg-hij",
             "2 participants": len(rec.participants) == 2,
             "2 segments (transcriptEntries key worked)": len(rec.segments) == 2,
