@@ -17,10 +17,9 @@ class Person(BaseModel):
 
 class Participant(BaseModel):
     name: str
-    id: str
+    id: Optional[str] = None #anonymous/phone participants have no stable id
     joinedAt: Optional[datetime.datetime] = None
     leftAt: Optional[datetime.datetime] = None
-
 
 
 class Segment(BaseModel):
