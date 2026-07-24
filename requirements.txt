@@ -5,6 +5,12 @@ google-auth
 google-auth-oauthlib
 google-auth-httplib2
 
-# STT fallback only (when a meeting has no Google transcript). Lazy-imported,
-# so the pipeline runs without it installed. Install to use stt/transcribe.py.
-azure-cognitiveservices-speech
+# STT fallback only (when a meeting has no Google transcript). Open-source,
+# self-hosted, free. Lazy-imported, so the pipeline runs without it installed;
+# install to use stt/transcribe.py. ctranslate2 (CPU/GPU runtime) comes with it.
+faster-whisper
+
+# Diarization for the mixed-audio path only (speaker labels on one combined WAV).
+# Needs HF_TOKEN + accepting the pyannote/speaker-diarization terms on HuggingFace.
+# Pulls in torch/pyannote; skip if your recordings are always per-speaker WAVs.
+# whisperx

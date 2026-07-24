@@ -114,7 +114,7 @@ def main():
         transcribe.process_meeting(mid)
 
         # 3. AGENT (fake LLM client) -> store
-        analyze.analyze_meeting(mid, _FakeLLM(), "fake-deployment")
+        analyze.analyze_meeting(mid, _FakeLLM(), "fake-model")
 
         # 4. Verify the final record
         rec = store.load_record(mid)

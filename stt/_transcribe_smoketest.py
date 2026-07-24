@@ -1,5 +1,5 @@
 """
-Dev smoketest for stt/transcribe.py orchestration — no Azure, no audio.
+Dev smoketest for stt/transcribe.py orchestration — no model, no audio.
 
 Verifies the two non-transcribing paths of process_meeting against a throwaway
 recordings root:
@@ -7,8 +7,8 @@ recordings root:
   2. A record with NO segments and NO audio is skipped with a clear message
      (and is left untouched — still empty).
 
-The actual Azure transcription path needs SPEECH_KEY + a real WAV and is not
-exercised here.
+The actual faster-whisper transcription path needs the model + a real WAV and is
+not exercised here.
 
 Run:  python -m stt._transcribe_smoketest
 """

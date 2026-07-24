@@ -61,6 +61,11 @@ The Teams build had three deployable pieces communicating only through files on 
 [archive / search / web UI / Notion]  →  consume the finished {callId}.json
 ```
 
+> **Current Meet stack (Azure dropped for cost):** STT is now **`faster-whisper`**
+> (self-hosted, free) in `stt/whisper_backend.py`; the analysis agent uses **OpenAI**
+> (or any OpenAI-compatible endpoint) in `agent/analyze.py`. The diagram above shows the
+> original Teams origin; the two "Full reference source" blocks below are archival.
+
 - The **bot** was the only Teams-specific, hard, Windows-only, always-on piece. It used
   Microsoft Graph Communications + the Skype media SDK to receive raw PCM frames (50/sec,
   20 ms each) via a **compliance recording policy** — an admin assigned a policy once and
@@ -227,22 +232,26 @@ Later you can swap the disk drop-box for Pub/Sub + a database without changing s
 
 ---
 
-## 6. STT worker — PORT NEARLY VERBATIM (Python already)
+## 6. STT worker — IMPLEMENTED with faster-whisper (Azure dropped)
 
-The Teams `stt-worker/transcribe.py` is platform-agnostic: it reads a call folder, transcribes
-WAVs with Azure AI Speech, and writes `segments[]` back into the JSON. **It works unchanged for
-Google Meet** as long as capture produces the same WAV + JSON layout.
+> **Status:** the Teams build used **Azure AI Speech**, but it was **removed for cost**.
+> The live implementation is `stt/transcribe.py` + `stt/whisper_backend.py` using
+> **`faster-whisper`** — open-source, self-hosted, free. The reference block below is the
+> original Teams Azure worker, kept for historical context only.
+
+The worker interface is unchanged from the Teams design: it reads a meeting folder, transcribes
+the WAV(s), and writes `segments[]` back into the JSON — so everything downstream is unaffected.
 
 Two decisions for the Meet port:
 
 1. **If you use Option A (Google transcripts):** you may not need this stage at all — instead
    write a tiny importer that maps Google's `transcripts.entries` (which already have speaker +
    start/end times) into our `segments[]` shape. Much cheaper and simpler than re-transcribing.
-2. **STT engine choice:** the Teams build used **Azure AI Speech**. For a Google-native stack,
-   **Google Cloud Speech-to-Text** (with diarization) is the natural swap; or keep Azure; or
-   use `faster-whisper`/OpenAI Whisper if you want provider independence. The *interface*
-   (WAV in → `segments[]` out) stays identical — only `_speech_config()` / the recognizer calls
-   change.
+2. **STT engine (decided):** **`faster-whisper`** with `WHISPER_MODEL=large-v3` as the base
+   multilingual model — strong ru/en, decent kk for trilingual meetings. Set `WHISPER_KK_MODEL`
+   (e.g. `abilmansplus/whisper-turbo-ksc2`, MIT-licensed) to route Kazakh-detected audio to a
+   specialist. The mixed-WAV path adds **WhisperX + pyannote** diarization when `HF_TOKEN` is set.
+   The *interface* (WAV in → `segments[]` out) is identical to the Azure version it replaced.
 
 Key behaviors to preserve when porting:
 - Auto-detect **two input modes**: per-speaker WAVs (`{personId}.wav`, clean attribution, no
@@ -254,6 +263,10 @@ Key behaviors to preserve when porting:
 
 <details>
 <summary><b>Full reference source — Teams <code>stt-worker/transcribe.py</code> (Azure AI Speech)</b></summary>
+
+> ⚠️ **Historical / archival.** This is the *original* Teams Azure worker. The live Meet
+> implementation replaced it with faster-whisper — see `stt/whisper_backend.py`. Do not treat
+> the code below as current.
 
 ```python
 """
@@ -468,14 +481,16 @@ Requirements: `azure-cognitiveservices-speech>=1.40.0`
 
 ---
 
-## 7. Analysis agent — PORT VERBATIM (Python already)
+## 7. Analysis agent — IMPLEMENTED on OpenAI (Azure dropped)
 
-The Teams `agent/analyze.py` is **fully platform-independent** — it reads a transcribed
+The `agent/analyze.py` is **fully platform-independent** — it reads a transcribed
 `{meetingId}.json`, calls an OpenAI-compatible LLM, and writes `summary` / `actionItems` /
-`analysis` back. **Copy it as-is.** The only thing to reconsider is the LLM provider: the Teams
-build used **Azure OpenAI** via the OpenAI SDK's Azure-v1 base URL. Options for the Meet build:
-keep Azure OpenAI, use **OpenAI direct**, or use **Google Vertex AI / Gemini** to stay
-Google-native. The prompt + JSON-object response format is the reusable asset; swap the client.
+`analysis` back.
+
+> **Status:** the Teams build used **Azure OpenAI**; the live Meet build uses the **OpenAI API**
+> directly (`OPENAI_API_KEY` / `OPENAI_MODEL`, default `gpt-4o-mini`). `OPENAI_BASE_URL` points the
+> same client at any OpenAI-compatible provider (e.g. DeepSeek) for cheaper inference — no code
+> change. The prompt + JSON-object response format is the reusable asset; only the client changed.
 
 Preserved behaviors worth keeping:
 - **Talk-time is computed locally** from segment durations (never trust the LLM for arithmetic).
@@ -488,6 +503,10 @@ Preserved behaviors worth keeping:
 
 <details>
 <summary><b>Full reference source — Teams <code>agent/analyze.py</code> (Azure OpenAI)</b></summary>
+
+> ⚠️ **Historical / archival.** This is the *original* Teams Azure-OpenAI agent. The live Meet
+> implementation uses the OpenAI API directly — see `agent/analyze.py`. Do not treat the code
+> below as current.
 
 ```python
 """
@@ -729,9 +748,10 @@ google-meet-agent/
 │   ├── browser_bot_source.py    # Option C stub (headless Chrome) — later
 │   └── run.py                   # trigger loop (poll or Pub/Sub) → writes {meetingId}.json
 ├── stt/
-│   └── transcribe.py            # ported from §6 (or a Google-transcript importer)
+│   ├── transcribe.py            # §6 orchestration (or a Google-transcript importer)
+│   └── whisper_backend.py       # §6 STT via faster-whisper (+ WhisperX diarization)
 ├── agent/
-│   └── analyze.py               # ported verbatim from §7
+│   └── analyze.py               # §7 analysis via OpenAI (OpenAI-compatible client)
 ├── archive/                     # Stage 3 — DB + object storage + search index
 ├── api/                         # backend the web UI calls (FastAPI recommended)
 ├── web/                         # Stage 4 — web UI (see §10)
@@ -739,8 +759,8 @@ google-meet-agent/
 ```
 
 Suggested stack: **FastAPI** for the API, **pydantic** for the schema model, a small DB
-(Postgres/SQLite to start), object storage (GCS if Google-native) for audio, and either
-Google Cloud STT or a ported Azure/Whisper worker.
+(Postgres/SQLite to start), object storage (GCS if Google-native) for audio, and the
+**faster-whisper** STT worker (§6).
 
 ---
 

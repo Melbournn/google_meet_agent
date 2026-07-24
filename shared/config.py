@@ -17,15 +17,17 @@ class Settings(BaseSettings):
     google_impersonate_subject: Optional[str] = None
     capture_trigger: str = "poll"
     use_google_transcript: bool = True
-    #STT
-    speech_key: Optional[str] = None
-    speech_region: Optional[str] = None
-    stt_language: str = "ru-RU"
-    stt_language_candidates: str = "ru-RU, kk-KZ, en-US"
-    #Agent
-    azure_openai_endpoint: Optional[str] = None
-    azure_openai_key: Optional[str] = None
-    azure_openai_deployment: Optional[str] = None
+    #STT (faster-whisper, open-source/self-hosted; lazy-imported)
+    stt_language: str = "auto"               # BCP-47 tag or "auto" (detect per file; enables kk routing)
+    whisper_model: str = "large-v3-turbo"          # base multilingual model (ru/en strong, kk decent)
+    whisper_kk_model: Optional[str] = None
+    whisper_device: str = "auto"             # "auto" | "cpu" | "cuda"
+    whisper_compute_type: str = "auto"       # "auto" | "int8" | "float16" | "int8_float16"
+    hf_token: Optional[str] = None           # HuggingFace token for pyannote diarization (WhisperX mixed path)
+    #Agent (LLM analysis via OpenAI or any OpenAI-compatible endpoint)
+    openai_api_key: Optional[str] = None
+    openai_model: str = "gpt-4o-mini"
+    openai_base_url: Optional[str] = None    # set for OpenAI-compatible providers (DeepSeek, Gemini-compat, ...)
     agent_output_language: str = "ru"
 
 settings = Settings()
