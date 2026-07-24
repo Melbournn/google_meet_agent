@@ -102,7 +102,7 @@ def check(label, passed):
 def main():
     try:
         store.save_record(_record())
-        analyze.analyze_meeting("mtg-1", _FakeClient(), "fake-deployment")
+        analyze.analyze_meeting("mtg-1", _FakeClient(), "fake-model")
         rec = store.load_record("mtg-1")
 
         results = [
@@ -115,7 +115,7 @@ def main():
 
         # Idempotency: second run should skip (summary now exists).
         before = rec.summary.tldr
-        analyze.analyze_meeting("mtg-1", _FakeClient(), "fake-deployment")
+        analyze.analyze_meeting("mtg-1", _FakeClient(), "fake-model")
         rec2 = store.load_record("mtg-1")
         results.append(check("second run is idempotent (skips)", rec2.summary.tldr == before))
 

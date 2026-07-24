@@ -1,9 +1,9 @@
 """
 Analysis agent (Stage 2). Reads a transcribed meeting via shared.store, sends the
-transcript to Azure OpenAI, and writes summary / actionItems / analysis back onto
-the record. Talk-time is computed locally, never by the LLM. Config comes from
-shared.config (AZURE_OPENAI_* + AGENT_OUTPUT_LANGUAGE); _client() is the single
-swap point for a Vertex/Gemini backend later.
+transcript to OpenAI (or any OpenAI-compatible endpoint), and writes summary /
+actionItems / analysis back onto the record. Talk-time is computed locally, never
+by the LLM. Config comes from shared.config (OPENAI_* + AGENT_OUTPUT_LANGUAGE);
+set OPENAI_BASE_URL to point at a cheaper compatible provider (DeepSeek, etc.).
 
 Usage:
     python -m agent.analyze <meetingId>
@@ -17,24 +17,14 @@ from openai import OpenAI
 from shared.config import settings
 from shared import store
 from shared.schema import Summary, ActionItem, Analysis
-from urllib.parse import urlparse
 
 
 def _client():
-    """Build an OpenAI client against the Azure OpenAI v1 (OpenAI-compatible) API.
-
-    Works for both classic Azure OpenAI (*.openai.azure.com) and Azure AI Foundry
-    (*.services.ai.azure.com) resources. We only keep scheme+host from whatever
-    AZURE_OPENAI_ENDPOINT is set to and append /openai/v1, so pasting the full
-    "target URI" (with /openai/v1/responses etc.) still works.
-    """
-    endpoint = settings.require("azure_openai_endpoint")
-    key = settings.require("azure_openai_key")
-    u = urlparse(endpoint.strip())
-    if not u.scheme or not u.netloc:
-        sys.exit(f"ERROR: AZURE_OPENAI_ENDPOINT looks malformed: {endpoint}")
-    base_url = f"{u.scheme}://{u.netloc}/openai/v1"
-    return OpenAI(base_url=base_url, api_key=key)
+    """Build an OpenAI client. Defaults to the OpenAI API; OPENAI_BASE_URL overrides
+    the host for any OpenAI-compatible provider."""
+    key = settings.require("openai_api_key")
+    base_url = settings.openai_base_url or None
+    return OpenAI(api_key=key, base_url=base_url)
 
 
 def _fmt_ts(ms):
@@ -79,7 +69,7 @@ SYSTEM_PROMPT = (
 )
 
 
-def analyze_meeting(meeting_id, client, deployment):
+def analyze_meeting(meeting_id, client, model):
     record = store.load_record(meeting_id)
     if not record.segments:
         print(f"[{meeting_id}] no segments --- run STT first"); return
@@ -94,9 +84,9 @@ def analyze_meeting(meeting_id, client, deployment):
         f"Transcript:\n{transcript}"
     )
 
-    print(f"[{meeting_id}] analyzing {len(record.segments)} segment(s) via {deployment} ...")
+    print(f"[{meeting_id}] analyzing {len(record.segments)} segment(s) via {model} ...")
     resp = client.chat.completions.create(
-        model=deployment,
+        model=model,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
@@ -120,13 +110,13 @@ def main():
         sys.exit(__doc__)
 
     client = _client()
-    deployment = settings.require("azure_openai_deployment")
+    model = settings.openai_model
 
     if args[0] == "--all":
         for meeting_id in store.list_meetings():
-            analyze_meeting(meeting_id, client, deployment)
+            analyze_meeting(meeting_id, client, model)
     else:
-        analyze_meeting(args[0], client, deployment)
+        analyze_meeting(args[0], client, model)
 
 
 if __name__ == "__main__":
