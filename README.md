@@ -46,7 +46,7 @@ Talk-time per speaker is computed **locally** from segment durations — never b
 python -m venv gma_venv
 .\gma_venv\Scripts\Activate.ps1          # macOS/Linux: source gma_venv/bin/activate
 pip install -r requirements.txt
-copy NEWREPO.env.example .env            # then fill in .env
+copy .env.example .env                   # then fill in .env
 ```
 
 Install the STT engine (kept out of the base install so the pipeline runs without it):
